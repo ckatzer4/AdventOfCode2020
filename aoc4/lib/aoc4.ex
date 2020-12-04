@@ -18,10 +18,10 @@ defmodule Aoc4 do
 
   def parse(text) do
     String.split(text, "\n\n")
-    |> Enum.map( &String.split/1)
-    |> Enum.map( fn(l) -> for s <- l, do: String.split(s, ":") end)
-    |> Enum.map( fn(l) -> for [k, v] <- l, do: {String.to_atom(k), v} end)
-    |> Enum.map( fn(l) -> Enum.into(l, %{}) end)
+    |> Enum.map(&String.split/1)
+    |> Enum.map(fn l -> for s <- l, do: String.split(s, ":") end)
+    |> Enum.map(fn l -> for [k, v] <- l, do: {String.to_atom(k), v} end)
+    |> Enum.map(fn l -> Enum.into(l, %{}) end)
   end
 
   def part1(batches) do
@@ -41,33 +41,41 @@ defmodule Batch do
 
   def verify_keys(batch) do
     needed = [
-      :byr, # (Birth Year)
-      :iyr, # (Issue Year)
-      :eyr, # (Expiration Year)
-      :hgt, # (Height)
-      :hcl, # (Hair Color)
-      :ecl, # (Eye Color)
-      :pid, # (Passport ID)
+      # (Birth Year)
+      :byr,
+      # (Issue Year)
+      :iyr,
+      # (Expiration Year)
+      :eyr,
+      # (Height)
+      :hgt,
+      # (Hair Color)
+      :hcl,
+      # (Eye Color)
+      :ecl,
+      # (Passport ID)
+      :pid
     ]
+
     Enum.all?(for a <- needed, do: Map.has_key?(batch, a))
   end
 
   def verify_byr(byr) do
     # byr (Birth Year) - four digits; at least 1920 and at most 2002.
     byr = String.to_integer(byr)
-    byr>=1920 and byr<=2002
+    byr >= 1920 and byr <= 2002
   end
 
   def verify_iyr(iyr) do
     # iyr (Issue Year) - four digits; at least 2010 and at most 2020.
     iyr = String.to_integer(iyr)
-    iyr>=2010 and iyr<=2020
+    iyr >= 2010 and iyr <= 2020
   end
 
   def verify_eyr(eyr) do
     # eyr (Expiration Year) - four digits; at least 2020 and at most 2030.
     eyr = String.to_integer(eyr)
-    eyr>=2020 and eyr<=2030
+    eyr >= 2020 and eyr <= 2030
   end
 
   def verify_hgt(hgt) do
@@ -78,12 +86,15 @@ defmodule Batch do
       String.ends_with?(hgt, "cm") ->
         hgt = String.replace_suffix(hgt, "cm", "")
         hgt = String.to_integer(hgt)
-        hgt>=150 and hgt<=193
+        hgt >= 150 and hgt <= 193
+
       String.ends_with?(hgt, "in") ->
         hgt = String.replace_suffix(hgt, "in", "")
         hgt = String.to_integer(hgt)
-        hgt>=59 and hgt<=76
-      true -> false
+        hgt >= 59 and hgt <= 76
+
+      true ->
+        false
     end
   end
 
@@ -106,7 +117,6 @@ defmodule Batch do
     end
   end
 
-
   def verify(batch) do
     if !verify_keys(batch) do
       false
@@ -118,9 +128,10 @@ defmodule Batch do
         {:hgt, &verify_hgt/1},
         {:hcl, &verify_hcl/1},
         {:ecl, &verify_ecl/1},
-        {:pid, &verify_pid/1},
+        {:pid, &verify_pid/1}
       ]
-      result = Enum.all?(tests, fn({k, test}) -> test.(batch[k]) end )
+
+      result = Enum.all?(tests, fn {k, test} -> test.(batch[k]) end)
       # IO.inspect(for {k, test} <- tests, do: {k, batch[k], test.(batch[k])} )
       result
     end
