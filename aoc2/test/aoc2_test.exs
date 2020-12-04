@@ -7,7 +7,7 @@ defmodule Aoc2Test do
   end
 
   test "parse_line" do
-    assert [[1,3], 97, "abcde"] = Aoc2.parse_line("1-3 a: abcde")
+    assert [[1, 3], 97, "abcde"] = Aoc2.parse_line("1-3 a: abcde")
   end
 
   test "eval rule1" do
@@ -25,5 +25,4 @@ defmodule Aoc2Test do
     assert !Aoc2.eval_rule2(Aoc2.parse_line(fail))
     assert !Aoc2.eval_rule2(Aoc2.parse_line(fail2))
   end
-
 end

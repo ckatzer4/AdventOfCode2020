@@ -17,9 +17,12 @@ defmodule Aoc2 do
   end
 
   def parse_line(l) do
-    [rule, letter, pass] = String.split(l," ")
-    rule = String.split(rule, "-")
-           |> Enum.map( &String.to_integer/1 )
+    [rule, letter, pass] = String.split(l, " ")
+
+    rule =
+      String.split(rule, "-")
+      |> Enum.map(&String.to_integer/1)
+
     letter = hd(String.to_charlist(letter))
     [rule, letter, pass]
   end
@@ -27,23 +30,25 @@ defmodule Aoc2 do
   def eval_rule1(l) do
     [rule, letter, pass] = l
     [low, high] = rule
-    count = Enum.count(String.to_charlist(pass), fn(c) -> c == letter end)
-    count>=low and count<=high
+    count = Enum.count(String.to_charlist(pass), fn c -> c == letter end)
+    count >= low and count <= high
   end
 
   def eval_rule2(l) do
     [rule, letter, pass] = l
     [low, high] = rule
     pass = String.to_charlist(pass)
-    low = Enum.fetch(pass, low-1) == {:ok, letter}
-    high = Enum.fetch(pass, high-1) == {:ok, letter}
+    low = Enum.fetch(pass, low - 1) == {:ok, letter}
+    high = Enum.fetch(pass, high - 1) == {:ok, letter}
     (low and !high) or (!low and high)
   end
 
   def parse(text) do
-    rules = String.split(text, "\n")
-            |> Enum.filter( fn(s) -> String.length(s) > 0 end)
-            |> Enum.map( &parse_line/1)
+    rules =
+      String.split(text, "\n")
+      |> Enum.filter(fn s -> String.length(s) > 0 end)
+      |> Enum.map(&parse_line/1)
+
     rules
   end
 
@@ -55,7 +60,6 @@ defmodule Aoc2 do
     Enum.count(rules, &eval_rule2/1)
   end
 end
-
 
 {:ok, text} = File.read("input")
 rules = Aoc2.parse(text)
