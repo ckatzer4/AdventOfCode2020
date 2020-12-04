@@ -18,7 +18,7 @@ defmodule Aoc3 do
 
   def parse(text) do
     String.split(text, "\n")
-    |> Enum.filter( fn(l) -> String.length(l) > 0 end)
+    |> Enum.filter(fn l -> String.length(l) > 0 end)
     |> Enum.map(&String.to_charlist/1)
   end
 
@@ -32,27 +32,32 @@ defmodule Aoc3 do
     c = SledMap.check_map(0, 5, 1, map, 0)
     d = SledMap.check_map(0, 7, 1, map, 0)
     e = SledMap.check_map(0, 1, 2, map, 0)
-    a*b*c*d*e
+    a * b * c * d * e
   end
 end
 
 defmodule SledMap do
   def check_map(c, m, d, [line | map], count) do
     crash = Enum.fetch(line, c) == {:ok, 35}
-    count = if crash do
-      count + 1
-    else
-      count
-    end
+
+    count =
+      if crash do
+        count + 1
+      else
+        count
+      end
+
     len = length(line)
-    c = rem(c+m, len)
+    c = rem(c + m, len)
     # special case - down two lines
     # doesn't work for d>2
-    map = if d>1 and length(map)>1 do
-      tl(map)
-    else
-      map
-    end
+    map =
+      if d > 1 and length(map) > 1 do
+        tl(map)
+      else
+        map
+      end
+
     check_map(c, m, d, map, count)
   end
 
