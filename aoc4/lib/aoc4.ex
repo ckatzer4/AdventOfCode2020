@@ -18,9 +18,9 @@ defmodule Aoc4 do
 
   def parse(text) do
     String.split(text, "\n\n")
-    |> Enum.map(&String.split/1)
-    |> Enum.map(fn l -> for s <- l, do: String.split(s, ":") end)
-    |> Enum.map(fn l -> for [k, v] <- l, do: {String.to_atom(k), v} end)
+    |> Stream.map(&String.split/1)
+    |> Stream.map(fn l -> for s <- l, do: String.split(s, ":") end)
+    |> Stream.map(fn l -> for [k, v] <- l, do: {String.to_atom(k), v} end)
     |> Enum.map(fn l -> Enum.into(l, %{}) end)
   end
 
