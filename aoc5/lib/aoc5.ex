@@ -30,21 +30,26 @@ defmodule Aoc5 do
   end
 
   def part2(codes) do
+    # start with the full list of seats
     seats =
       0..127
       |> Enum.flat_map(fn r -> for c <- 0..7, do: {r, c} end)
 
+    # remove each taken seat
     seats =
       codes
       |> Stream.map(&Seat.search/1)
       |> Enum.reduce(seats, fn {:ok, r, c}, seats -> List.delete(seats, {r, c}) end)
 
-    # find seats without full rows
+    # at this point, any full row doesn't actually exist
+    # so, just find the row that has one open seat
+    # make a mapping of row number to open seats
     rows =
       Enum.reduce(seats, %{}, fn {r, c}, acc ->
         Map.update(acc, r, [c], fn l -> [c | l] end)
       end)
 
+    # find the row with just one seat
     {r, [c]} = Enum.find(rows, fn {_k, v} -> length(v) == 1 end)
     # IO.inspect({r,c})
     r * 8 + c
@@ -61,6 +66,13 @@ defmodule Seat do
 
   Recursive search, each time taking the first grapheme
   and reducing either the row or col range by half.
+
+  Args:
+  - code: list of graphemes (["F", "B", "L", "R"])
+  - lrow: lowest row in search
+  - hrow: highest row in search
+  - lcol: lowest col in search
+  - hcol: highest col in search
   """
   def search_inner(code, lrow \\ 0, hrow \\ 127, lcol \\ 0, hcol \\ 7)
 
