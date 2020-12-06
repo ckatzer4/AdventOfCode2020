@@ -60,8 +60,3 @@ defmodule Aoc2 do
     Enum.count(rules, &eval_rule2/1)
   end
 end
-
-{:ok, text} = File.read("input")
-rules = Aoc2.parse(text)
-IO.puts(Aoc2.part1(rules))
-IO.puts(Aoc2.part2(rules))

@@ -16,9 +16,7 @@ defmodule Aoc1 do
     :world
   end
 
-  def parse do
-    {:ok, text} = File.read("input")
-
+  def parse(text) do
     ints =
       String.split(text, "\n")
       |> Enum.filter(fn s -> String.length(s) > 1 end)
@@ -51,7 +49,3 @@ defmodule RC do
     for(l <- comb(m - 1, t), do: [h | l]) ++ comb(m, t)
   end
 end
-
-ints = Aoc1.parse()
-IO.puts(Aoc1.part1(ints))
-IO.puts(Aoc1.part2(ints))

@@ -65,8 +65,3 @@ defmodule SledMap do
     count
   end
 end
-
-{:ok, text} = File.read("input")
-map = Aoc3.parse(text)
-IO.puts(Aoc3.part1(map))
-IO.puts(Aoc3.part2(map))

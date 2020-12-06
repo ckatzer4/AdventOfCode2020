@@ -34,7 +34,7 @@ defmodule Aoc4 do
 end
 
 defmodule Batch do
-  def verify_keys(%{cid: _cid} = batch) do
+  def verify_keys(%{cid: _} = batch) do
     {_cid, batch} = Map.pop!(batch, :cid)
     verify_keys(batch)
   end
@@ -137,8 +137,3 @@ defmodule Batch do
     end
   end
 end
-
-{:ok, text} = File.read("input")
-batches = Aoc4.parse(text)
-IO.puts(Aoc4.part1(batches))
-IO.puts(Aoc4.part2(batches))

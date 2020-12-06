@@ -114,8 +114,3 @@ defmodule Seat do
     end
   end
 end
-
-{:ok, text} = File.read("input")
-codes = Aoc5.parse(text)
-IO.puts(Aoc5.part1(codes))
-IO.puts(Aoc5.part2(codes))
