@@ -72,10 +72,10 @@ defmodule Seats do
         {r + rd, c + cd}
       end)
       |> Stream.map(&Map.get(seats, &1))
-      |> Enum.take_while(&(&1 != nil))
+      |> Stream.take_while(&(&1 != nil))
     end)
     |> Enum.count(fn l ->
-      Enum.filter(l, &(&1 != "."))
+      Stream.filter(l, &(&1 != "."))
       |> Enum.at(0) == "#"
     end)
   end
