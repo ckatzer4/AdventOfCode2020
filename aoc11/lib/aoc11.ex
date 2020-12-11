@@ -17,6 +17,8 @@ defmodule Aoc11 do
   end
 
   def parse(text) do
+    # parse text into map of coord => grapheme
+    # %{{0,0} => "L", {0,1} => ".", ... }
     String.split(text, "\n")
     |> Enum.filter(fn s -> String.length(s) > 0 end)
     |> Enum.with_index()
@@ -67,6 +69,7 @@ defmodule Seats do
       {1, 1}
     ]
 
+    # make Streams for each direction
     Enum.map(directions, fn {rd, cd} ->
       Stream.iterate({r+rd, c+cd}, fn {r, c} ->
         {r + rd, c + cd}
@@ -74,6 +77,7 @@ defmodule Seats do
       |> Stream.map(&Map.get(seats, &1))
       |> Stream.take_while(&(&1 != nil))
     end)
+    # check first non-"." grapheme
     |> Enum.count(fn l ->
       Stream.filter(l, &(&1 != "."))
       |> Enum.at(0) == "#"
@@ -81,6 +85,7 @@ defmodule Seats do
   end
 
   def print(seats) do
+    # helper function for printing
     {rows, cols} =
       Enum.reduce(seats, {0, 0}, fn {coord, _}, max ->
         if coord > max do
@@ -101,7 +106,8 @@ defmodule Seats do
 end
 
 defmodule SeatEvolver do
-  def stabilize(seats, hist \\ []) do
+  def stabilize(seats) do
+    # get max row and col
     {rows, cols} =
       Enum.reduce(seats, {0, 0}, fn {coord, _}, max ->
         if coord > max do
@@ -111,6 +117,7 @@ defmodule SeatEvolver do
         end
       end)
 
+    # evaluate rules for all coordinate pairs
     next =
       0..rows
       |> Enum.flat_map(fn r -> Enum.map(0..cols, &{r, &1}) end)
@@ -140,11 +147,12 @@ defmodule SeatEvolver do
       Enum.map(seats, fn {_, v} -> v end)
       |> Enum.count(&(&1 == "#"))
     else
-      SeatEvolver.stabilize(next, [seats | hist])
+      SeatEvolver.stabilize(next)
     end
   end
 
   def stabilize2(seats) do
+    # get max row and col
     {rows, cols} =
       Enum.reduce(seats, {0, 0}, fn {coord, _}, max ->
         if coord > max do
@@ -154,6 +162,7 @@ defmodule SeatEvolver do
         end
       end)
 
+    # evaluate rules for all coordinate pairs
     next =
       0..rows
       |> Enum.flat_map(fn r -> Enum.map(0..cols, &{r, &1}) end)
