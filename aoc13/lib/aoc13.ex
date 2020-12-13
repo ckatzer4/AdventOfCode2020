@@ -17,7 +17,7 @@ defmodule Aoc13 do
   end
 
   def parse(text) do
-    # firat line is starting timestamp
+    # first line is starting timestamp
     # second line is available buses (igmore x)
     lines = String.split(text, "\n")
     start = Enum.at(lines,0) |> String.to_integer()
@@ -83,8 +83,9 @@ defmodule CRT do
   @doc """
   Run each stage of the sieve.
 
-  First stage finds a value that first the first rwo equations.
-  Second stage finds a value for the first three; three for four, etc.
+  First stage finds a value that solves the first rwo equations.
+  Second stage finds a value that solves the first three; 
+  Third for four, etc.
   """
   def inner([], [], _step, result) do
     result
@@ -94,7 +95,8 @@ defmodule CRT do
     # starting from result, increment by step and test
     result = Stream.iterate(result, &(&1+step))
     # |> Stream.map(&IO.inspect/1)
-    |> Stream.filter(fn t -> rem(t,mod) == rem(r,mod) end)
+    |> Stream.filter(fn t -> rem(t,mod) == r end)
+    # take the first result that passes the test
     |> Enum.at(0)
     inner(remainders, moduli, step*mod, result)
   end
