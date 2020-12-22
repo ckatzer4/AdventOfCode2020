@@ -22,37 +22,41 @@ defmodule Aoc20 do
   end
 
   def part2(tiles) do
-    # fill in the map, starting with a corner.
-    # Orient the corner so the south and east borders will fit with future pieces
-    # brute force matches, removing from the pool of tiles and adding to the map
-    {init, initial_borders} =
-      Tiles.find_corners(tiles)
-      |> Enum.at(3)
-
-    edges = Tiles.find_edges(tiles)
-    |> Enum.map(fn {id, _} -> tiles[id] end)
-
-    Tile.print(tiles[init])
-    IO.inspect(initial_borders)
-
     new_borders = [
-      {:west, for(r <- 0..9, do: {r, 9})},
-      {:north, for(c <- 0..9, do: {9, c})}
+      {{0, 0}, :north},
+      {{0, 0}, :south},
+      {{0, 0}, :west},
+      {{0, 0}, :east}
     ]
 
+    # tile coord => tile
     map = %{}
-    map = Enum.reduce(tiles[init] |> Tile.flip(:vertical) |> Tile.flip(:horizontal), map, fn {{r, c}, _}, map -> Map.put(map, {r, c}, "#") end)
+    init = Enum.at(Map.keys(tiles), 0)
+    map = Map.put(map, {0, 0}, tiles[init])
+
     {_, tiles} = Map.pop(tiles, init)
 
-
-    # map = TreasureMap.loop(map, edges, new_borders)
-    # |> IO.inspect()
-
     map =
-      TreasureMap.loop(map, Map.values(tiles), new_borders)
-      |> IO.inspect()
+      TileMap.loop(map, Map.values(tiles), new_borders)
 
-    nil
+    # We found our tile placements!
+    map = SeaMap.assemble(map)
+
+    orientations = [
+      &(&1),
+      &(&1 |> SeaMap.rotate()),
+      &(&1 |> SeaMap.rotate() |> SeaMap.rotate() ),
+      &(&1 |> SeaMap.rotate() |> SeaMap.rotate() |> SeaMap.rotate() ),
+      &(&1 |> SeaMap.flip(:vertical) ),
+      &(&1 |> SeaMap.flip(:vertical) |> SeaMap.rotate() ),
+      &(&1 |> SeaMap.flip(:vertical) |> SeaMap.rotate() |> SeaMap.rotate() ),
+      &(&1 |> SeaMap.flip(:vertical) |> SeaMap.rotate() |> SeaMap.rotate() |> SeaMap.rotate() ),
+    ]
+
+    proper = Enum.max_by(orientations, fn o -> SeaMap.find_serpents(o.(map)) |> Enum.count() end)
+    map = proper.(map)
+    SeaMap.remove_serpents(map)
+    |> Enum.count()
   end
 
   def parse(text) do
@@ -182,13 +186,30 @@ defmodule Tiles do
   end
 end
 
-defmodule TreasureMap do
-  def line_up(map, tile, {side, coords}) do
+defmodule TileMap do
+  def line_up(map, tile, {coord, side}) do
     # map - reference tile, already placed
-    # coords - coordinates for map border to match, direction matters!
+    # coord - coordinates for map tile to match, direction matters!
     # tile - tile to orient
-    # side - side of tile to match border (should only be :west or :north)
-    border = Enum.map(coords, &Map.get(map, &1, "."))
+    # side - side of tile that needs to match map
+    border =
+      case side do
+        :north ->
+          m = Map.get(map, coord)
+          Enum.map(0..9, &Map.get(m, {9, &1}, "."))
+
+        :south ->
+          m = Map.get(map, coord)
+          Enum.map(0..9, &Map.get(m, {0, &1}, "."))
+
+        :west ->
+          m = Map.get(map, coord)
+          Enum.map(0..9, &Map.get(m, {&1, 9}, "."))
+
+        :east ->
+          m = Map.get(map, coord)
+          Enum.map(0..9, &Map.get(m, {&1, 0}, "."))
+      end
 
     scenario =
       Tile.all_borders(tile)
@@ -205,172 +226,202 @@ defmodule TreasureMap do
           case {scenario, side} do
             # north & north, no changes
             {0, :north} ->
-              # IO.inspect({0, :north})
               tile
+
+            # north matches, but needs to be south
+            {0, :south} ->
+              Tile.flip(tile, :horizontal)
 
             # north matches, but needs to be west
             {0, :west} ->
-              # IO.inspect({0, :west})
               # rotate and flip across vertical
               Tile.rotate(tile) |> Tile.flip(:vertical)
+
+            # north matches, but needs to be east
+            {0, :east} ->
+              Tile.rotate(tile)
 
             # south matches, but needs to be north
             {1, :north} ->
-              # IO.inspect({1, :north})
               # flip across horizontal
               Tile.flip(tile, :horizontal)
 
+            # south matches south
+            {1, :south} ->
+              tile
+
             # south matches, but needs to be west
             {1, :west} ->
-              # IO.inspect({1, :west})
               # rotate once
               Tile.rotate(tile)
 
+            # south matches, but needs to be east
+            {1, :east} ->
+              # rotate once
+              Tile.rotate(tile) |> Tile.flip(:vertical)
+
             # west matches, but needs to be north
             {2, :north} ->
-              # IO.inspect({2, :north})
               # rotate and flip across vertical
               Tile.rotate(tile) |> Tile.flip(:vertical)
 
+            # west matches, but needs to be south
+            {2, :south} ->
+              # rotate and flip across vertical
+              tile |> Tile.rotate() |> Tile.rotate() |> Tile.rotate()
+
             # west & west, no changes
             {2, :west} ->
-              # IO.inspect({2, :west})
               tile
+
+            # west matches, but needs to be east
+            {2, :east} ->
+              Tile.flip(tile, :vertical)
 
             # east matches, but needs to be north
             {3, :north} ->
-              # IO.inspect({3, :north})
               # rotate three times!
               tile |> Tile.rotate() |> Tile.rotate() |> Tile.rotate()
 
+            # east matches, but needs to be south
+            {3, :south} ->
+              # rotate three times!
+              tile |> Tile.rotate() |> Tile.flip(:vertical)
+
             # east matches, but needs to be west
             {3, :west} ->
-              # IO.inspect({3, :west})
               Tile.flip(tile, :vertical)
+
+            # east matches east
+            {3, :east} ->
+              tile
 
             # north reverse needs to match north
             {4, :north} ->
-              # IO.inspect({4, :north})
               Tile.flip(tile, :vertical)
+
+            # north reverse needs to match south
+            {4, :south} ->
+              Tile.flip(tile, :vertical) |> Tile.flip(:horizontal)
 
             # north reverse needs to match west
             {4, :west} ->
-              # IO.inspect({4, :west})
               tile |> Tile.rotate() |> Tile.rotate() |> Tile.rotate()
+
+            # north reverse needs to match east
+            {4, :east} ->
+              tile |> Tile.rotate() |> Tile.flip(:horizontal)
 
             # south reverse needs to match north
             {5, :north} ->
-              # IO.inspect({5, :north})
               Tile.flip(tile, :horizontal) |> Tile.flip(:vertical)
+
+            # south reverse needs to match south
+            {5, :south} ->
+              Tile.flip(tile, :vertical)
 
             # south reverse needs to match west
             {5, :west} ->
-              # IO.inspect({5, :west})
-              tile |> Tile.rotate()
+              tile |> Tile.rotate() |> Tile.flip(:horizontal)
+
+            # south reverse needs to match east
+            {5, :east} ->
+              tile |> Tile.rotate() |> Tile.rotate() |> Tile.rotate()
 
             # west reverse needs to match north
             {6, :north} ->
-              # IO.inspect({6, :north})
               tile |> Tile.rotate()
+
+            # west reverse needs to match south
+            {6, :south} ->
+              tile |> Tile.rotate() |> Tile.flip(:horizontal)
 
             # west reverse needs to match west
             {6, :west} ->
-              # IO.inspect({7, :west})
               Tile.flip(tile, :horizontal)
+
+            # west reverse needs to match east
+            {6, :east} ->
+              Tile.flip(tile, :horizontal) |> Tile.flip(:vertical)
 
             # east reverse
             {7, :north} ->
-              # IO.inspect({7, :north})
               Tile.flip(tile, :vertical) |> Tile.rotate()
 
             # east reverse
+            {7, :south} ->
+              Tile.rotate(tile)
+
+            # east reverse
             {7, :west} ->
-              # IO.inspect({7, :west})
               Tile.flip(tile, :horizontal) |> Tile.flip(:vertical)
 
+            # east reverse
+            {7, :east} ->
+              Tile.flip(tile, :horizontal)
+
             # no match means we hit an edge
-            _ ->
+            X ->
               IO.puts("Oh no you messed up!")
-              {map, []}
+              {:fail, map, []}
           end
 
-        # validate tile fits on both edges
-        {r_offset, c_offset} = hd(coords)
-        # |> IO.inspect()
-        validate_borders =
-          case {r_offset, c_offset} do
-            {0, 0} ->
-              []
+        # add tile to map and track new borders
+        {r, c} = coord
 
-            {_, 0} ->
-              [{:north, for(c <- 0..9, do: {r_offset, c + c_offset})}]
+        {map, new_borders} =
+          case side do
+            :north ->
+              {Map.put(map, {r + 1, c}, tile),
+               [
+                 {{r + 1, c}, :north},
+                 {{r + 1, c}, :west},
+                 {{r + 1, c}, :east}
+               ]}
 
-            {0, _} ->
-              [{:west, for(r <- 0..9, do: {r + r_offset, c_offset})}]
+            :south ->
+              {Map.put(map, {r - 1, c}, tile),
+               [
+                 {{r - 1, c}, :south},
+                 {{r - 1, c}, :west},
+                 {{r - 1, c}, :east}
+               ]}
 
-            _ ->
-              [
-                {:west, for(r <- 0..9, do: {r + r_offset, c_offset})},
-                {:north, for(c <- 0..9, do: {r_offset, c + c_offset})}
-              ]
+            :west ->
+              {Map.put(map, {r, c + 1}, tile),
+               [
+                 {{r, c + 1}, :north},
+                 {{r, c + 1}, :south},
+                 {{r, c + 1}, :west}
+               ]}
+
+            :east ->
+              {Map.put(map, {r, c - 1}, tile),
+               [
+                 {{r, c - 1}, :north},
+                 {{r, c - 1}, :south},
+                 {{r, c - 1}, :east}
+               ]}
           end
 
-        if !Enum.all?(validate_borders, &validate?(map, tile, &1)) do
-          TreasureMap.print(map)
-          IO.inspect(validate_borders)
-          {:fail}
-        else
-          # add tile to map and track new borders
-          new_borders = [
-            {:west, for(r <- 0..9, do: {r + r_offset, c_offset + 9})},
-            {:north, for(c <- 0..9, do: {r_offset + 9, c + c_offset})}
-          ]
-
-          map =
-            Enum.reduce(tile, map, fn {{r, c}, _}, map ->
-              Map.put(map, {r + r_offset, c + c_offset}, "#")
-            end)
-
-          {:hit, map, new_borders}
-        end
-    end
-  end
-
-  defp validate?(map, tile, {direction, coords}) do
-    Tile.print(tile)
-    case direction do
-      :north ->
-        from_map = Enum.map(coords, &Map.get(map, &1, "."))
-        from_tile = Enum.map(for(c <- 0..9, do: {0, c}), &Map.get(tile, &1, "."))
-        (from_map == from_tile) or (from_map = [".", ".", ".", ".", ".", ".", ".", ".", ".", "."])
-
-      :west ->
-        from_map = Enum.map(coords, &Map.get(map, &1, "."))
-        from_tile = Enum.map(for(r <- 0..9, do: {r, 0}), &Map.get(tile, &1, "."))
-        (from_map == from_tile) or (from_map = [".", ".", ".", ".", ".", ".", ".", ".", ".", "."])
+        {:hit, map, new_borders}
     end
   end
 
   def loop(map, [t | tiles], borders) do
-    # IO.inspect({length([t | tiles]), length(borders)})
     # map and borders should be initialized
     # for each tile, try to fit in one of the borders
     # on hit, drop tile and border
-    if length(tiles) == 19 do
-      # Tile.print(t)
-      # IO.puts("")
-    end
-
     case loop_borders(map, t, borders) do
       {:hit, map, new, old} ->
-        IO.puts("We fit this tile:")
-        Tile.print(t)
+        # IO.puts("We fit this tile:")
+        # Tile.print(t)
         # IO.puts("Removing this border:")
         # IO.inspect(old)
         # IO.puts("Adding these borders:")
         # IO.inspect(new)
-        TreasureMap.print(map)
-        # borders = List.delete(borders, old)
+        # TileMap.print(map)
+        borders = List.delete(borders, old)
         loop(map, tiles, new ++ borders)
 
       {:miss} ->
@@ -392,18 +443,148 @@ defmodule TreasureMap do
     end
   end
 
-  defp loop_borders(map, _, []) do
+  defp loop_borders(_map, _, []) do
     {:miss}
   end
 
   def print(map) do
-    {r_min, r_max} = Map.keys(map) |> Enum.map(fn {r, _} -> r end) |> Enum.min_max() |> IO.inspect()
-    {c_min, c_max} = Map.keys(map) |> Enum.map(fn {_, c} -> c end) |> Enum.min_max() |> IO.inspect()
+    {r_min, r_max} =
+      Map.keys(map) |> Enum.map(fn {r, _} -> r end) |> Enum.min_max()
 
+    Enum.map(r_min..r_max, fn r -> print_row(map,r) end)
+  end
+
+  defp print_row(map, mr) do
+    {c_min, c_max} =
+      Map.keys(map) |> Enum.map(fn {_, c} -> c end) |> Enum.min_max()
+
+    Enum.map(0..9, fn tr ->
+      Enum.map(c_min..c_max, fn c ->
+        tile = Map.get(map, {mr,c}, %{})
+        Enum.map(0..9, &Map.get(tile, {tr, &1}, "."))
+        |> Enum.reduce(&(&2 <> &1))
+      end)
+      |> Enum.join(" ")
+      |> IO.puts()
+    end)
+    IO.puts("")
+  end
+end
+
+defmodule SeaMap do
+  def assemble(tile_map) do
+    {r_min, r_max} =
+      Map.keys(tile_map) |> Enum.map(fn {r, _} -> r end) |> Enum.min_max()
+    {c_min, c_max} =
+      Map.keys(tile_map) |> Enum.map(fn {_, c} -> c end) |> Enum.min_max()
+    Enum.flat_map(r_min..r_max, fn tr ->
+      Enum.flat_map(c_min..c_max, fn tc ->
+        # remove borders from tile, add to map
+        Map.get(tile_map, {tr, tc})
+        |> Enum.filter(fn {{r,c},_} -> (r<9) and (r>0) and (c<9) and (c>0) end)
+        |> Enum.map(fn {{r,c}, v} -> {{((tr-r_min)*8)+r-1,((tc-c_min)*8)+c-1}, v} end)
+      end)
+    end)
+    |> Enum.into(%{})
+  end
+
+  def print(sea_map) do
+    {r_min, r_max} =
+      Map.keys(sea_map) |> Enum.map(fn {r, _} -> r end) |> Enum.min_max()
+    {c_min, c_max} =
+      Map.keys(sea_map) |> Enum.map(fn {_, c} -> c end) |> Enum.min_max()
     Enum.map(r_min..r_max, fn r ->
-      Enum.map(c_min..c_max, &Map.get(map, {r, &1}, "."))
+      Enum.map(c_min..c_max, &Map.get(sea_map, {r, &1}, "."))
       |> Enum.reduce(&(&2 <> &1))
       |> IO.puts()
+    end)
+  end
+
+  def rotate(sea_map) do
+    # rotate 90 degrees clockwise at a time
+    # col 3 -> row 3
+    # row 1 -> col 8
+    {r_min, r_max} =
+      Map.keys(sea_map) |> Enum.map(fn {r, _} -> r end) |> Enum.min_max()
+    flip = Enum.zip(r_min..r_max, r_max..r_min) |> Enum.into(%{})
+
+    Map.keys(sea_map)
+    |> Enum.map(fn {r, c} -> {{c, flip[r]}, "#"} end)
+    |> Enum.into(%{})
+  end
+
+  def flip(sea_map, dir) do
+    {r_min, r_max} =
+      Map.keys(sea_map) |> Enum.map(fn {r, _} -> r end) |> Enum.min_max()
+    flip = Enum.zip(r_min..r_max, r_max..r_min) |> Enum.into(%{})
+    case dir do
+      :horizontal ->
+        Map.keys(sea_map)
+        |> Enum.map(fn {r, c} -> {{flip[r], c}, "#"} end)
+        |> Enum.into(%{})
+
+      :vertical ->
+        Map.keys(sea_map)
+        |> Enum.map(fn {r, c} -> {{r, flip[c]}, "#"} end)
+        |> Enum.into(%{})
+    end
+  end
+
+  def find_serpents(sea_map) do
+    serpent = %{
+      {0,18} => "#",
+      {1,0} => "#",
+      {1,5} => "#",
+      {1,6} => "#",
+      {1,11} => "#",
+      {1,12} => "#",
+      {1,17} => "#",
+      {1,18} => "#",
+      {1,19} => "#",
+      {2,1} => "#",
+      {2,4} => "#",
+      {2,7} => "#",
+      {2,10} => "#",
+      {2,13} => "#",
+      {2,16} => "#",
+    }
+    {r_min, r_max} =
+      Map.keys(sea_map) |> Enum.map(fn {r, _} -> r end) |> Enum.min_max()
+    {c_min, c_max} =
+      Map.keys(sea_map) |> Enum.map(fn {_, c} -> c end) |> Enum.min_max()
+
+    Enum.flat_map(r_min..r_max, fn r ->
+      Enum.filter(c_min..c_max, fn c ->
+        Enum.all?(serpent, fn {{ro, co}, v} -> Map.get(sea_map, {r+ro, c+co}) == v end)
+      end)
+      |> Enum.map(&({r,&1}))
+    end)
+  end
+
+  def remove_serpents(sea_map) do
+    serpent = %{
+      {0,18} => "#",
+      {1,0} => "#",
+      {1,5} => "#",
+      {1,6} => "#",
+      {1,11} => "#",
+      {1,12} => "#",
+      {1,17} => "#",
+      {1,18} => "#",
+      {1,19} => "#",
+      {2,1} => "#",
+      {2,4} => "#",
+      {2,7} => "#",
+      {2,10} => "#",
+      {2,13} => "#",
+      {2,16} => "#",
+    }
+    coords = find_serpents(sea_map)
+    # remove serpents from sea_map for each coords
+    Enum.reduce(coords, sea_map, fn {r,c}, sm ->
+      Enum.reduce(Map.keys(serpent), sm, fn {ro,co}, m ->
+        Map.delete(m, {r+ro, c+co})
+      end)
     end)
   end
 end
