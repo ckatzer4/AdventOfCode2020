@@ -25,30 +25,16 @@ defmodule Aoc19 do
           # rule for a specific character
           {:char, String.replace(rule, "\"", "")}
 
-        String.contains?(rule, "|") ->
-          # rule for an either or pattern
-          [left, right] = String.split(rule, " | ")
-
-          left =
-            String.split(left)
-            |> Enum.map(&String.to_integer/1)
-
-          right =
-            String.split(right)
-            |> Enum.map(&String.to_integer/1)
-
-          {:either, left, right}
-
         true ->
-          # rule for a series of rules
-          rule =
-            String.split(rule)
-            |> Enum.map(&String.to_integer/1)
+          # rule is a nested list of options
+          options =
+            String.split(rule, " | ")
+            |> Enum.map(&String.split(&1, " "))
 
-          {:series, rule}
+          {:rule, options}
       end
 
-    {String.to_integer(idx), rule}
+    {idx, rule}
   end
 
   def parse(text) do
@@ -69,56 +55,52 @@ defmodule Aoc19 do
   def part1({rules, messages}) do
     Enum.count(messages, &Rules.valid?(rules, &1))
   end
+
+  def part2({rules, messages}) do
+    # clear cache since we have new rules
+    Memoize.Cache.invalidate()
+    # 8: 42 | 42 8
+    # 11: 42 31 | 42 11 31
+    rules = Map.put(rules, "8", {:rule, [["42"], ["42", "8"]]})
+    rules = Map.put(rules, "11", {:rule, [["42", "31"], ["42", "11", "31"]]})
+    Enum.count(messages, &Rules.valid?(rules, &1))
+  end
 end
 
 defmodule Rules do
+  use Memoize
+
   def valid?(rules, message) do
-    gr =
-      graph(rules, 0)
-    message in options(gr, [""], message)
+    check_message(rules, "0", message)
   end
 
-  def graph(rules, idx) do
-    case rules[idx] do
-      {:char, g} ->
-        g
-
-      {:series, s} ->
-        Enum.map(s, &graph(rules, &1))
-
-      {:either, l, r} ->
-        {Enum.map(l, &graph(rules, &1)), Enum.map(r, &graph(rules, &1))}
-    end
-  end
-
-  def options(chunks, opts \\ [""], test \\ nil)
-
-  def options({left, right}, opts, _test) do
-    # IO.puts("Left/right:")
-    # IO.inspect({left, right})
-    # IO.puts("#{length(opts)}")
-    options(left, opts) ++ options(right, opts)
-  end
-
-  def options(series, opts, test) when is_list(series) do
-    # IO.puts("Series:")
-    # IO.inspect(series)
-    # IO.puts("#{length(opts)}")
-    # evaluate each individual chunk, then concat all combos
-    Enum.reduce(series, opts, fn g, opts ->
-      List.flatten(options(g, opts))
-      # if we have a test case, attempt to filter
-      |> Enum.filter(fn o ->
-        case test do
-          nil -> true
-          _ -> String.starts_with?(test, o)
-        end
-      end)
+  def check_message(rules, r, message) do
+    # IO.inspect({r, message})
+    Memoize.Cache.get_or_run({__MODULE__, :check, [r, message]}, fn ->
+      # IO.inspect({"new", r, message})
+      do_check_message(rules, r, message)
     end)
   end
 
-  def options(g, opts, _test) when is_binary(g) do
-    # IO.puts("Binary: #{g}")
-    for o <- opts, do: o<>g
+  def do_check_message(rules, [r | rs], message) do
+    1..String.length(message)
+    |> Enum.map(&String.split_at(message, &1))
+    |> Enum.any?(fn {head, tail} ->
+      check_message(rules, r, head) and check_message(rules, rs, tail)
+    end)
+  end
+
+  def do_check_message(_rules, [], ""), do: true
+  def do_check_message(_rules, [], _), do: false
+  def do_check_message(_rules, _r, ""), do: false
+
+  def do_check_message(rules, idx, message) do
+    case rules[idx] do
+      {:char, g} ->
+        g == message
+
+      {:rule, s} ->
+        Enum.any?(s, &check_message(rules, &1, message))
+    end
   end
 end

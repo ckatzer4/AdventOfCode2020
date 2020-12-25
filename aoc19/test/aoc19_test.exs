@@ -23,12 +23,12 @@ aaaabbb"
     {rules, messages} = Aoc19.parse(text)
 
     assert rules == %{
-             0 => {:series, [4, 1, 5]},
-             1 => {:either, [2, 3], [3, 2]},
-             2 => {:either, [4, 4], [5, 5]},
-             3 => {:either, [4, 5], [5, 4]},
-             4 => {:char, "a"},
-             5 => {:char, "b"}
+             "0" => {:rule, [["4", "1", "5"]]},
+             "1" => {:rule, [["2", "3"], ["3", "2"]]},
+             "2" => {:rule, [["4", "4"], ["5", "5"]]},
+             "3" => {:rule, [["4", "5"], ["5", "4"]]},
+             "4" => {:char, "a"},
+             "5" => {:char, "b"}
            }
 
     assert messages == [
@@ -38,11 +38,6 @@ aaaabbb"
              "aaabbb",
              "aaaabbb"
            ]
-
-    gr = Rules.graph(rules, 0)
-    |> IO.inspect()
-    Rules.options(tl(gr), [hd(gr)])
-    |> IO.inspect()
   end
 
   test "part1" do
